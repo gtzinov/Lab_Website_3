@@ -27,7 +27,7 @@ const dbConfig = {
 	port: 5432,
 	database: 'football_db',
 	user: 'postgres',
-	password: 'pwd'
+	password: 'Gordon03!'
 };
 
 var db = pgp(dbConfig);
@@ -81,19 +81,215 @@ app.use(express.static(__dirname + '/'));//This line is necessary for us to use 
 ************************************/
 
 // login page 
-app.get('/', function(req, res) {
-	res.render('pages/login',{
-		local_css:"signin.css", 
-		my_title:"Login Page"
+app.get('/', function (req, res) {
+	res.render('pages/login', {
+		local_css: "signin.css",
+		my_title: "Login Page"
 	});
 });
 
 // registration page 
-app.get('/register', function(req, res) {
-	res.render('pages/register',{
-		my_title:"Registration Page"
+app.get('/register', function (req, res) {
+	res.render('pages/register', {
+		my_title: "Registration Page"
 	});
 });
+
+app.get('/home', function (req, res) {
+	var query = 'select * from favorite_colors;';
+	db.any(query)
+		.then(function (rows) {
+			res.render('pages/home', {
+				my_title: "Home Page",
+				data: rows,
+				color: '',
+				color_msg: ''
+			})
+
+		})
+		.catch(function (err) {
+			// display error message in case an error
+			console.log('error', err);
+			response.render('pages/home', {
+				title: 'Home Page',
+				data: '',
+				color: '',
+				color_msg: ''
+			})
+		})
+});
+// app.get('/home', function (req, res) {
+// 	var handlerows = function (rows) {
+// 		res.render('pages/home', {
+// 			my_title: "Home Page",
+// 			data: rows,
+// 			color: '',
+// 			color_msg: ''
+// 		})
+// 	}
+
+// 	var query = 'select * from favorite_colors;';
+// 	// res.json({name:"hello"})
+// 	// console.log(req)
+// 	var dbPromise = db.any(query)
+// 	console.log(dbPromise)
+//      setTimeout(() => )
+// 	console.log("After timeout")
+// })
+// 	.catch(function (err) {
+// 		// display error message in case an error
+// 		console.log('error', err);
+// 		response.render('pages/home', {
+// 			title: 'Home Page',
+// 			data: '',
+// 			color: '',
+// 			color_msg: ''
+// 		})
+// 	})
+// console.log("outside.then");
+// }
+
+app.get('/home/pick_color', function (req, res) {
+	var color_choice = req.query.color_selection;
+	var color_options = 'select * from favorite_colors;';
+	var color_message = "select color_msg from favorite_colors where hex_value = '" + color_choice + "';";
+	db.task('get-everything', task => {
+		return task.batch([
+			task.any(color_options),
+			task.any(color_message)
+		]);
+	})
+		.then(info => {
+			res.render('pages/home', {
+				my_title: "Home Page",
+				data: info[0],
+				color: color_choice,
+				color_msg: info[1][0].color_msg
+			})
+		})
+		.catch(err => {
+			// display error message in case an error
+			console.log('error', err);
+			response.render('pages/home', {
+				title: 'Home Page',
+				data: '',
+				color: '',
+				color_msg: ''
+			})
+		});
+
+});
+
+app.post('/home/pick_color', function (req, res) {
+	var color_hex = req.body.color_hex;
+	var color_name = req.body.color_name;
+	var color_message = req.body.color_message;
+	var insert_statement = "INSERT INTO favorite_colors(hex_value, name, color_msg) VALUES('" + color_hex + "','" +
+		color_name + "','" + color_message + "') ON CONFLICT DO NOTHING;";
+
+	var color_select = 'select * from favorite_colors;';
+	db.task('get-everything', task => {
+		return task.batch([
+			task.any(insert_statement),
+			task.any(color_select)
+		]);
+	})
+		.then(info => {
+			res.render('pages/home', {
+				my_title: "Home Page",
+				data: info[1],
+				color: color_hex,
+				color_msg: color_message
+			})
+		})
+		.catch(err => {
+			// display error message in case an error
+			console.log('error', err);
+			response.render('pages/home', {
+				title: 'Home Page',
+				data: '',
+				color: '',
+				color_msg: ''
+			})
+		});
+});
+
+app.get('/team_stats', function (req, res) {
+	var queryGames = "select * from football_games;"
+	var queryWinCount = "select count(*) from football_games where home_score > visitor_score;"
+	var queryLossCount = "select count(*) from football_games where home_score < visitor_score;"
+
+	db.task(task => {
+		return task.batch([
+			task.any(queryGames),
+			task.any(queryWinCount),
+			task.any(queryLossCount)
+		]);
+	})
+		.then(dataObject => {
+			// console.log(dataObject[1][0].count)
+			res.render('pages/team_stats', {
+				my_title: 'Team Stats',
+				dataGames: dataObject[0],
+				dataWinCount: dataObject[1][0].count,
+				dataLossCount: dataObject[2][0].count
+			})
+		})
+})
+
+app.get('/player_info', function (req, res) {
+	queryFootballPlayers = "select id, name from football_players;"
+
+	db.any(queryFootballPlayers)
+		.then(dataObject => {
+			// console.log(dataObject[1].name)
+			res.render('pages/player_info', {
+				my_title: 'Player Info',
+				dataPlayers: dataObject
+			})
+		})
+})
+
+app.get('/player_info/select_player', function (req, res) {
+	var player_id = req.query.player_choice
+	// console.log(req.query)
+	// console.log(req.body)
+
+
+
+	queryFootballPlayers = "select id, name from football_players;"
+	queryPlayerByID = "select * from football_players where id = " + player_id
+		+ ";";
+	queryTotalGamesPlayed = "select count(*) from football_games where " + player_id +
+		"=ANY(football_games.players::int[]);"
+
+	db.task('myqueries', function (task) {
+		return task.batch(
+			[
+				task.any(queryFootballPlayers),
+				task.any(queryPlayerByID),
+				task.any(queryTotalGamesPlayed)
+			]
+		)
+	})
+
+		.then(info => {
+			console.log(info[1])
+
+			res.render('pages/player_info', {
+				my_title: "Players Info",
+
+				dataPlayers: info[0],
+				playerIDInfo: info[1],
+				totalGamesPlayed: info[2]
+			})
+
+		})
+
+
+
+})
+
 
 /*Add your other get/post request handlers below here: */
 
