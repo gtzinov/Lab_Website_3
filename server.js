@@ -248,6 +248,8 @@ var defaultPlayer = {
 	img_src: '../resources/img/helmet.jpg'
 }
 
+//handling edge case with default objects
+
 var defaultCount = {
 	count: ""
 }
@@ -257,9 +259,7 @@ app.get('/player_info', function (req, res) {
 
 	db.any(queryFootballPlayers)
 		.then(dataObject => {
-			// console.log(dataObject[1].name)
 			res.render('pages/player_info', {
-
 				my_title: 'Player Info',
 				dataPlayers: dataObject,
 				playerIDInfo: [defaultPlayer],
@@ -270,8 +270,6 @@ app.get('/player_info', function (req, res) {
 
 app.get('/player_info/select_player', function (req, res) {
 	var player_id = req.query.player_choice
-	// console.log(req.query)
-	// console.log(req.body)
 
 
 
@@ -292,8 +290,6 @@ app.get('/player_info/select_player', function (req, res) {
 	})
 
 		.then(info => {
-			console.log(info[2])
-
 			res.render('pages/player_info', {
 				my_title: "Players Info",
 
