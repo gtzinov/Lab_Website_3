@@ -237,6 +237,21 @@ app.get('/team_stats', function (req, res) {
 		})
 })
 
+var defaultPlayer = {
+	id: 0,
+	name: '',
+	year: '',
+	major: '',
+	passing_yards: 0,
+	rushing_yards: 0,
+	receiving_yards: 0,
+	img_src: '../resources/img/helmet.jpg'
+}
+
+var defaultCount = {
+	count: ""
+}
+
 app.get('/player_info', function (req, res) {
 	queryFootballPlayers = "select id, name from football_players;"
 
@@ -244,8 +259,11 @@ app.get('/player_info', function (req, res) {
 		.then(dataObject => {
 			// console.log(dataObject[1].name)
 			res.render('pages/player_info', {
+
 				my_title: 'Player Info',
-				dataPlayers: dataObject
+				dataPlayers: dataObject,
+				playerIDInfo: [defaultPlayer],
+				totalGamesPlayed: [defaultCount]
 			})
 		})
 })
@@ -274,7 +292,7 @@ app.get('/player_info/select_player', function (req, res) {
 	})
 
 		.then(info => {
-			console.log(info[1])
+			console.log(info[2])
 
 			res.render('pages/player_info', {
 				my_title: "Players Info",
